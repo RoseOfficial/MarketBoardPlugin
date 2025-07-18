@@ -35,6 +35,10 @@ namespace MarketBoardPlugin
 
     private readonly MarketBoardShoppingListWindow marketBoardShoppingListWindow;
 
+    private readonly MarketBoardArbitrageWindow marketBoardArbitrageWindow;
+
+    private readonly ArbitrageAnalyzer arbitrageAnalyzer;
+
     /// <summary>
     /// Gets the window system.
     /// </summary>
@@ -80,13 +84,17 @@ namespace MarketBoardPlugin
 
       this.Config = this.PluginInterface.GetPluginConfig() as MBPluginConfig ?? new MBPluginConfig();
 
+      this.arbitrageAnalyzer = new ArbitrageAnalyzer(this.UniversalisClient, this);
+
       this.marketBoardWindow = new MarketBoardWindow(this);
       this.marketBoardConfigWindow = new MarketBoardConfigWindow(this);
       this.marketBoardShoppingListWindow = new MarketBoardShoppingListWindow(this);
+      this.marketBoardArbitrageWindow = new MarketBoardArbitrageWindow(this, this.arbitrageAnalyzer);
 
       this.windowSystem.AddWindow(this.marketBoardWindow);
       this.windowSystem.AddWindow(this.marketBoardConfigWindow);
       this.windowSystem.AddWindow(this.marketBoardShoppingListWindow);
+      this.windowSystem.AddWindow(this.marketBoardArbitrageWindow);
 
       // Set up command handlers
       this.CommandManager.AddHandler("/pmb", new CommandInfo(this.OnOpenMarketBoardCommand)
@@ -230,6 +238,7 @@ namespace MarketBoardPlugin
         // Remove windows
         this.windowSystem.RemoveAllWindows();
         this.marketBoardWindow.Dispose();
+        this.marketBoardArbitrageWindow.Dispose();
 
         // Remove command handlers
         this.CommandManager.RemoveHandler("/pmb");
@@ -324,7 +333,11 @@ namespace MarketBoardPlugin
     {
       if (!string.IsNullOrEmpty(arguments))
       {
-        if (uint.TryParse(arguments, out var itemId))
+        if (arguments.Equals("arbitrage", StringComparison.OrdinalIgnoreCase))
+        {
+          this.marketBoardArbitrageWindow.IsOpen = !this.marketBoardArbitrageWindow.IsOpen;
+        }
+        else if (uint.TryParse(arguments, out var itemId))
         {
           this.marketBoardWindow.ChangeSelectedItem(itemId);
           this.marketBoardWindow.IsOpen = true;

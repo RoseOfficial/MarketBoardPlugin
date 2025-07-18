@@ -7,6 +7,7 @@ namespace MarketBoardPlugin
   using System.Collections.Generic;
   using System.Diagnostics.CodeAnalysis;
   using Dalamud.Configuration;
+  using MarketBoardPlugin.Models.Arbitrage;
 
   /// <summary>
   /// Configuration for MBPlugin.
@@ -83,5 +84,10 @@ namespace MarketBoardPlugin
     /// Gets or sets the number of historical entries to retrieve.
     /// </summary>
     public int HistoryCount { get; set; } = 50;
+
+    /// <summary>
+    /// Gets or sets the arbitrage analysis configuration.
+    /// </summary>
+    public ArbitrageConfig ArbitrageConfig { get; set; } = new ArbitrageConfig();
   }
 }

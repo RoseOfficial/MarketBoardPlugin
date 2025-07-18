@@ -6,6 +6,7 @@ namespace MarketBoardPlugin.Helpers
 {
   using System;
   using System.Collections.Generic;
+  using System.Linq;
   using System.Net.Http;
   using System.Text.Json;
   using System.Threading;
@@ -128,6 +129,56 @@ namespace MarketBoardPlugin.Helpers
         this.plugin.Log.Warning(ex, "Failed to parse data centers.");
         throw;
       }
+    }
+
+    /// <summary>
+    /// Retrieves market data for a specific item across multiple worlds simultaneously.
+    /// </summary>
+    /// <param name="itemId">The ID of the item to retrieve market data for.</param>
+    /// <param name="worldNames">The names of the worlds to retrieve market data from.</param>
+    /// <param name="listingCount">The number of current listings to retrieve.</param>
+    /// <param name="historyCount">The number of historical entries to retrieve.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>A dictionary mapping world names to their market data responses.</returns>
+    public async Task<Dictionary<string, MarketDataResponse?>> GetMultiWorldMarketData(uint itemId, IEnumerable<string> worldNames, int listingCount, int historyCount, CancellationToken cancellationToken)
+    {
+      var tasks = worldNames.Select(async worldName =>
+      {
+        try
+        {
+          var marketData = await this.GetMarketData(itemId, worldName, listingCount, historyCount, cancellationToken).ConfigureAwait(false);
+          return new KeyValuePair<string, MarketDataResponse?>(worldName, marketData);
+        }
+        catch (Exception ex)
+        {
+          this.plugin.Log.Warning(ex, $"Failed to fetch market data for item {itemId} on world {worldName}.");
+          return new KeyValuePair<string, MarketDataResponse?>(worldName, null);
+        }
+      });
+
+      var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+      return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+    }
+
+    /// <summary>
+    /// Retrieves market data for multiple items across multiple worlds simultaneously.
+    /// </summary>
+    /// <param name="itemIds">The IDs of the items to retrieve market data for.</param>
+    /// <param name="worldNames">The names of the worlds to retrieve market data from.</param>
+    /// <param name="listingCount">The number of current listings to retrieve.</param>
+    /// <param name="historyCount">The number of historical entries to retrieve.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>A dictionary mapping item IDs to their world-specific market data.</returns>
+    public async Task<Dictionary<uint, Dictionary<string, MarketDataResponse?>>> GetMultiItemMultiWorldMarketData(IEnumerable<uint> itemIds, IEnumerable<string> worldNames, int listingCount, int historyCount, CancellationToken cancellationToken)
+    {
+      var tasks = itemIds.Select(async itemId =>
+      {
+        var worldData = await this.GetMultiWorldMarketData(itemId, worldNames, listingCount, historyCount, cancellationToken).ConfigureAwait(false);
+        return new KeyValuePair<uint, Dictionary<string, MarketDataResponse?>>(itemId, worldData);
+      });
+
+      var results = await Task.WhenAll(tasks).ConfigureAwait(false);
+      return results.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
 
     /// <summary>
